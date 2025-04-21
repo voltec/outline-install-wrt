@@ -82,14 +82,6 @@ read -p "Enter Outline Server IP: " OUTLINEIP
 # Read user variable for Outline config
 read -p "Enter Outline (Shadowsocks) Config (format ss://base64coded@HOST:PORT/?outline=1): " OUTLINECONF
 
-#Step 9. Check for default gateway and save it into DEFGW
-DEFGW=$(ip route | grep default | awk '{print $3}')
-echo 'checked default gateway'
-
-#Step 10. Check for default interface and save it into DEFIF
-DEFIF=$(ip route | grep default | awk '{print $5}')
-echo 'checked default interface'
-
 # Step 11: Create script /etc/init.d/tun2socks
 if [ ! -f "/etc/init.d/tun2socks" ]; then
 cat <<EOL > /etc/init.d/tun2socks
@@ -115,6 +107,7 @@ start_service() {
     procd_set_param stderr 1
     procd_set_param respawn "${respawn_threshold:-3600}" "${respawn_timeout:-5}" "${respawn_retry:-5}"
     procd_close_instance
+    DEFGW=$(ip route | grep default | awk '{print $3}')
     ip route add "$OUTLINEIP" via "$DEFGW" #Adds route to OUTLINE Server
 	echo 'route to Outline Server added'
     ip route save default > /tmp/defroute.save  #Saves existing default route
@@ -134,6 +127,7 @@ shutdown() {
 stop_service() {
     service_stop /usr/bin/tun2socks
     ip route restore default < /tmp/defroute.save #Restores saved default route
+    DEFGW=$(ip route | grep default | awk '{print $3}')
     ip route del "$OUTLINEIP" via "$DEFGW" #Removes route to OUTLINE Server
     echo "tun2socks has stopped!"
 }
